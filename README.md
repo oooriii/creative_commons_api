@@ -1,54 +1,73 @@
-# creative_commons_api
-api creative commons fake - mockup
+# CC Mock API
 
+Simulador de l’API REST de Creative Commons v1.5 per a proves amb DSpace. Port `5000`.
 
-Install dependencies
-```
-# Instal·la les dependències
-uv pip install -e .
+## Prova local amb uv
 
-# O amb pip tradicional
-pip install -e .
+Instal·leu [uv](https://docs.astral.sh/uv/getting-started/installation/) si us cal. Obriu un terminal nou després d’instal·lar-lo.
 
-# Executa el servidor
-python cc_mock_server.py
-
-# O amb uvicorn directament
-uvicorn cc_mock_server:app --reload --port 5000
+```sh
+curl -fsSL https://astral.sh/uv/install.sh | sh
 ```
 
-Run the server
-```
-uv run cc_mock_server:app --host 0.0.0.0 --port 5000
-```
+Des de l’arrel del projecte:
 
-
-Docker
-```
-# Build i run
-docker-compose up --build cc-mock
-
-# Només el servei mock
-docker-compose up cc-mock
-
+```sh
+uv sync --locked
+uv run --no-sync uvicorn cc_mock_server:app --host 0.0.0.0 --port 5000
 ```
 
-Tests
+## Servei systemd
+
+Linux amb `sudo` i usuari i grup `www-data`. El projecte ha de ser llegible per aquest usuari.
+
+**1. Instal·leu uv a la ruta de la unitat.** Si ja teniu un binari accessible per a `www-data`, podeu fer servir aquella ruta a `ExecStart` i a l’ordre de sincronització.
+
+```sh
+curl -fsSL https://astral.sh/uv/install.sh | sudo env UV_UNMANAGED_INSTALL=/usr/local/bin sh
 ```
-# Health check
-curl http://localhost:5000/health
 
-# Workflow 1: Llicències
-curl http://localhost:5000/?locale=ca
+**2. Prepareu l’entorn.** Si canvieu la ruta del projecte, ajusteu `WorkingDirectory`. Si ja hi ha una `.venv` d’un altre usuari, moveu-la abans.
 
-# Workflow 2: Camps
-curl http://localhost:5000/license/standard?locale=ca
+```sh
+cd /dades/creative-commons/cc-mock-api
+sudo install -d -o www-data -g www-data -m 0755 \
+  .venv /var/cache/cc-mock-api /var/lib/cc-mock-api/python
+sudo -u www-data env UV_CACHE_DIR=/var/cache/cc-mock-api \
+  UV_PYTHON_INSTALL_DIR=/var/lib/cc-mock-api/python \
+  /usr/local/bin/uv sync --locked
+```
 
-# Workflow 3B: Detalls
-curl "http://localhost:5000/details?license-uri=http://creativecommons.org/licenses/by-nc-sa/3.0/"
+**3. Instal·leu i activeu la unitat.** Deixeu lliure el port 5000 abans d’arrencar.
 
-# Workflow 3A: Issue (POST)
-curl -X POST http://localhost:5000/license/standard/issue \
-  -d "answers=<answers><locale>ca</locale><license-standard><commercial>n</commercial><derivatives>sa</derivatives></license-standard></answers>"
+```sh
+sudo install -m 0644 cc-mock-api.service /etc/systemd/system/cc-mock-api.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now cc-mock-api.service
+sudo systemctl status cc-mock-api.service
+```
 
+Registres amb `sudo journalctl -u cc-mock-api.service -n 50`. En actualitzar el projecte, repetiu la sincronització del pas 2 i feu `sudo systemctl restart cc-mock-api.service`. Si canvieu la unitat, torneu-la a copiar i feu `daemon-reload` abans de reiniciar.
+
+## Docker
+
+Per executar només el mock, des de l’arrel del projecte:
+
+```sh
+docker build -t cc-mock-api .
+docker run --rm -p 5000:5000 cc-mock-api
+```
+
+## DSpace
+
+A `[dspace]/config/local.cfg`, poseu-hi l’URL accessible des del backend de DSpace.
+
+```properties
+cc.api.rooturl = http://nom-del-servidor:5000
+```
+
+## Comprovació
+
+```sh
+curl -fsS http://127.0.0.1:5000/health
 ```
