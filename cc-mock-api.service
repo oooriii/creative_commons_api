@@ -1,0 +1,16 @@
+[Unit]
+Description=CC Mock API Service
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/dades/creative-commons/cc-mock-api
+Environment=UV_CACHE_DIR=/var/cache/cc-mock-api
+Environment=UV_PYTHON_INSTALL_DIR=/var/lib/cc-mock-api/python
+ExecStart=/usr/local/bin/uv run --no-sync --no-python-downloads uvicorn cc_mock_server:app --host 0.0.0.0 --port 5000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
