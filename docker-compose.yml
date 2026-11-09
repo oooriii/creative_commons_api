@@ -1,22 +1,12 @@
 services:
   cc-mock:
     build:
-      context: ./cc-mock
+      context: .
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
-    networks:
-      - dspace-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:5000/health', timeout=3).close()"]
       interval: 10s
       timeout: 5s
       retries: 5
-
-  dspace:
-    # ... la teva config de DSpace
-    environment:
-      - cc__P__api__P__rooturl=http://cc-mock:5000
-    depends_on:
-      cc-mock:
-        condition: service_healthy
